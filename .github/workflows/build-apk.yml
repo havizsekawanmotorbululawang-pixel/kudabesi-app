@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java JDK
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -25,30 +25,47 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Siapkan Web Assets
+      - name: Siapkan Web Assets & Konfigurasi
         run: |
           mkdir -p www
           cp index.html www/
-          cp qris.png www/ || true
+          cp qris.png www/ 2>/dev/null || true
+          
+          # Buat package.json otomatis
+          cat << 'EOF' > package.json
+          {
+            "name": "kudabesi-app",
+            "version": "1.0.0",
+            "private": true
+          }
+          EOF
 
-      - name: Pasang Capacitor & Generate Android
-        run: |
-          npm init -y
-          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
-          npx cap init "KudaBesi" "com.kudabesi.ojol" --web-dir "www"
+          # Pasang Capacitor versi stabil
+          npm install --save @capacitor/core@5.7.4 @capacitor/cli@5.7.4 @capacitor/android@5.7.4
+
+          # Buat konfigurasi Capacitor
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.kudabesi.ojol",
+            "appName": "KudaBesi",
+            "webDir": "www",
+            "bundledWebRuntime": false
+          }
+          EOF
+
+          # Generate folder Android tanpa prompt interaktif
           npx cap add android
-          npx cap sync android
 
-      - name: Build APK via Gradle
+      - name: Build APK dengan Gradle
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload File APK
+      - name: Upload File APK Jadi
         uses: actions/upload-artifact@v4
         with:
-          name: KudaBesi-Ojol-APK
+          name: KudaBesi-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
